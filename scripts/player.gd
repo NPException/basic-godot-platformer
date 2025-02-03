@@ -9,8 +9,15 @@ extends CharacterBody2D
 @onready var jump_sound: AudioStreamPlayer2D = $JumpSound
 @onready var tap_sound: AudioStreamPlayer2D = $TapSound
 
-const BRAKE = 1000.0
-const SPEED = 130.0
+const MAX_SPEED = 130.0
+const FLOOR_ACCELERATION_FRAMES = 5
+const AIR_ACCELERATION_FRAMES = 10
+const AIR_DRAG_FRAMES = 30
+
+var floor_acceleration := (MAX_SPEED / FLOOR_ACCELERATION_FRAMES) * Engine.physics_ticks_per_second
+var air_acceleration := (MAX_SPEED / AIR_ACCELERATION_FRAMES) * Engine.physics_ticks_per_second
+var air_drag := (MAX_SPEED / AIR_DRAG_FRAMES) * Engine.physics_ticks_per_second
+
 const JUMP_VELOCITY = -300.0
 const DEATH_BUMP_VELOCITY = -200.0
 
@@ -59,10 +66,15 @@ func _physics_process(delta: float) -> void:
 		if direction != 0:
 			animated_sprite.flip_h = direction < 0
 		
-		if direction:
-			velocity.x = direction * SPEED
+		var target_speed := direction * MAX_SPEED
+		if is_on_floor():
+			velocity.x = move_toward(velocity.x, target_speed, floor_acceleration * delta)
 		else:
-			velocity.x = move_toward(velocity.x, 0, BRAKE * delta)
+			var sign_a := signf(velocity.x)
+			var sign_b := signf(target_speed)
+			# use air drag only when target speed is same direction and lower than current speed
+			var use_air_drag := sign_a == sign_b && absf(target_speed) < absf(velocity.x)
+			velocity.x = move_toward(velocity.x, target_speed, (air_drag if use_air_drag else air_acceleration) * delta)
 	
 	move_and_slide()
 
