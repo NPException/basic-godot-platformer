@@ -218,8 +218,8 @@ animations = [{
 "speed": 10.0
 }]
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_07u7h"]
-radius = 5.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_aa34m"]
+size = Vector2(8, 10)
 
 [node name="CharacterBody2D" type="CharacterBody2D"]
 z_index = 5
@@ -235,7 +235,7 @@ autoplay = "idle"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(0, -5)
-shape = SubResource("CircleShape2D_07u7h")
+shape = SubResource("RectangleShape2D_aa34m")
 
 [node name="HurtSound" type="AudioStreamPlayer2D" parent="."]
 stream = ExtResource("3_tcqio")

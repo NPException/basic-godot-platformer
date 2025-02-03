@@ -189,7 +189,7 @@ sources/0 = SubResource("TileSetAtlasSource_mmj1e")
 [sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_r7bny"]
 
 [sub_resource type="Animation" id="Animation_vt7by"]
-length = 5.0
+length = 0.001
 tracks/0/type = "value"
 tracks/0/imported = false
 tracks/0/enabled = true
