@@ -21,6 +21,9 @@ var air_drag := (MAX_SPEED / AIR_DRAG_FRAMES) * Engine.physics_ticks_per_second
 const JUMP_VELOCITY = -300.0
 const DEATH_BUMP_VELOCITY = -200.0
 
+const COYOTE_FRAMES = 6
+var coyote_time := float(COYOTE_FRAMES) / Engine.physics_ticks_per_second
+
 var alive := true
 var can_jump := true
 
@@ -46,7 +49,7 @@ func _physics_process(delta: float) -> void:
 			time_since_floor += delta
 		
 		# coyote time
-		can_jump = is_on_floor() || can_jump && time_since_floor <= 0.1
+		can_jump = is_on_floor() || can_jump && time_since_floor <= coyote_time
 		
 		# Play animations
 		if can_jump:
