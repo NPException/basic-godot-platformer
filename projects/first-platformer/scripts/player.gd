@@ -95,7 +95,7 @@ func _physics_process(delta: float) -> void:
 			if allow_launch_leniency:
 				print("launching. launch frames left: ", launch_frames_remaining, " ticks: ", Engine.get_physics_frames())
 			velocity = adjusted_velocity
-			velocity.y += JUMP_VELOCITY
+			velocity.y = JUMP_VELOCITY if velocity.y > 0 else velocity.y + JUMP_VELOCITY
 			check_speed()
 			animated_sprite.play("jump")
 			jump_sound.play()
