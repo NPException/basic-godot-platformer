@@ -15,16 +15,14 @@ const FLOOR_ACCELERATION_FRAMES = 5
 const AIR_ACCELERATION_FRAMES = 10
 const AIR_DRAG_FRAMES = 30
 
-var floor_acceleration := (MAX_SPEED / FLOOR_ACCELERATION_FRAMES) * Engine.physics_ticks_per_second
-var air_acceleration := (MAX_SPEED / AIR_ACCELERATION_FRAMES) * Engine.physics_ticks_per_second
-var air_drag := (MAX_SPEED / AIR_DRAG_FRAMES) * Engine.physics_ticks_per_second
+const FLOOR_ACCELERATION := MAX_SPEED / FLOOR_ACCELERATION_FRAMES
+const AIR_ACCELERATION := MAX_SPEED / AIR_ACCELERATION_FRAMES
+const AIR_DRAG := MAX_SPEED / AIR_DRAG_FRAMES
 
 const JUMP_VELOCITY = -300.0
 const DEATH_BUMP_VELOCITY = -200.0
 
 const COYOTE_FRAMES = 6
-var coyote_time := float(COYOTE_FRAMES) / Engine.physics_ticks_per_second
-
 const LAUNCH_LENIENCY_FRAMES = 6
 
 var launch_frames_remaining := 0
@@ -33,7 +31,7 @@ var launch_velocity := Vector2.ZERO
 var alive := true
 var can_jump := true
 
-var time_since_floor := 0.0
+var frames_since_floor := 0
 
 var can_teleport := false
 
@@ -44,19 +42,28 @@ func check_speed() -> void:
 # TODO:
 # - proportional jump. idea: quickly decay jump height when space is released mid jump (aka, increased gravity)
 # - drop down through one-way platforms/tiles when pressing duck
-# - add teleport on yeet island to get back
-# - add safe point before yeet (?)
+# - separate floor acceleration and floor drag
 
 func _physics_process(delta: float) -> void:
 	if can_teleport && Input.is_action_just_pressed("yeet_reset"):
 		global_position = Vector2(832, -16)
 		velocity = Vector2.ZERO
 	
-	
 	# get the input direction: negative, 0, positive
 	var direction := Input.get_axis("move_left", "move_right")
 	
 	check_speed()
+	
+	# count frames since leaving the floor
+	if is_on_floor():
+		if frames_since_floor >= 6:
+			tap_sound.play()
+		frames_since_floor = 0
+	else:
+		frames_since_floor += 1
+	
+	# coyote time
+	can_jump = is_on_floor() || can_jump && frames_since_floor <= COYOTE_FRAMES
 	
 	# Add the gravity.
 	if not is_on_floor():
@@ -64,16 +71,6 @@ func _physics_process(delta: float) -> void:
 		velocity.y = min(velocity.y, MAX_FALL_SPEED)
 	
 	if alive:
-		if is_on_floor():
-			if time_since_floor > 0.1:
-				tap_sound.play()
-			time_since_floor = 0.0
-		else:
-			time_since_floor += delta
-		
-		# coyote time
-		can_jump = is_on_floor() || can_jump && time_since_floor <= coyote_time
-		
 		# launch leniency
 		# TODO: it seems like a jump on the very first frame of launch leniency will cause a massive yeet,
 		#       so for consistency I should probably account for this... but it's funny if I don't
@@ -109,13 +106,13 @@ func _physics_process(delta: float) -> void:
 		var target_speed := direction * MAX_SPEED
 		
 		if is_on_floor() && can_jump:
-			velocity.x = move_toward(velocity.x, target_speed, floor_acceleration * delta)
+			velocity.x = move_toward(velocity.x, target_speed, FLOOR_ACCELERATION)
 		else:
 			var sign_a := signf(velocity.x)
 			var sign_b := signf(target_speed)
 			# use air drag only when target speed is same direction and lower than current speed
 			var use_air_drag := sign_a == sign_b && absf(target_speed) < absf(velocity.x)
-			velocity.x = move_toward(velocity.x, target_speed, (air_drag if use_air_drag else air_acceleration) * delta)
+			velocity.x = move_toward(velocity.x, target_speed, AIR_DRAG if use_air_drag else AIR_ACCELERATION)
 	
 	move_and_slide()
 
