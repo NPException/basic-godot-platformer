@@ -1,0 +1,40 @@
+[gd_scene load_steps=2 format=3 uid="uid://o6a60u8hd2s5"]
+
+[sub_resource type="GDScript" id="GDScript_5nsjy"]
+script/source = "extends Area2D
+
+# Area2D which can share its recent velocity via a signal
+
+signal share_velocity
+
+var previous_position := Vector2.ZERO
+var current_position := Vector2.ZERO
+
+func _physics_process(_delta: float) -> void:
+	previous_position = current_position
+	current_position = Vector2(global_position)
+
+
+func trigger() -> void:
+	share_velocity.emit((current_position - previous_position) * Engine.physics_ticks_per_second)
+
+
+func _on_body_entered(body: Node2D) -> void:
+	var player := body as Player
+	if player:
+		share_velocity.connect(player.on_platform_velocity_shared)
+
+
+func _on_body_exited(body: Node2D) -> void:
+	var player := body as Player
+	if player:
+		share_velocity.disconnect(player.on_platform_velocity_shared)
+"
+
+[node name="VelocityAwareArea" type="Area2D"]
+collision_layer = 0
+collision_mask = 2
+script = SubResource("GDScript_5nsjy")
+
+[connection signal="body_entered" from="." to="." method="_on_body_entered"]
+[connection signal="body_exited" from="." to="." method="_on_body_exited"]

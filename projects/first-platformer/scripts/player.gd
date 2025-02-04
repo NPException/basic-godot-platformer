@@ -10,6 +10,7 @@ extends CharacterBody2D
 @onready var tap_sound: AudioStreamPlayer2D = $TapSound
 
 const MAX_SPEED = 130.0
+const MAX_FALL_SPEED = 300.0
 const FLOOR_ACCELERATION_FRAMES = 5
 const AIR_ACCELERATION_FRAMES = 10
 const AIR_DRAG_FRAMES = 30
@@ -24,21 +25,43 @@ const DEATH_BUMP_VELOCITY = -200.0
 const COYOTE_FRAMES = 6
 var coyote_time := float(COYOTE_FRAMES) / Engine.physics_ticks_per_second
 
+const LAUNCH_LENIENCY_FRAMES = 6
+
+var launch_frames_remaining := 0
+var launch_velocity := Vector2.ZERO
+
 var alive := true
 var can_jump := true
 
 var time_since_floor := 0.0
 
+var can_teleport := false
+
+func check_speed() -> void:
+	if velocity.x > 1000:
+		print("weeeeee ", Engine.get_physics_frames(), " - ", velocity) # set breakpoint here
+
 # TODO:
-# - quickly decay jump height when space is released mid jump (aka, increased gravity)
+# - proportional jump. idea: quickly decay jump height when space is released mid jump (aka, increased gravity)
+# - drop down through one-way platforms/tiles when pressing duck
+# - add teleport on yeet island to get back
+# - add safe point before yeet (?)
 
 func _physics_process(delta: float) -> void:
+	if can_teleport && Input.is_action_just_pressed("yeet_reset"):
+		global_position = Vector2(832, -16)
+		velocity = Vector2.ZERO
+	
+	
 	# get the input direction: negative, 0, positive
 	var direction := Input.get_axis("move_left", "move_right")
+	
+	check_speed()
 	
 	# Add the gravity.
 	if not is_on_floor():
 		velocity += get_gravity() * delta
+		velocity.y = min(velocity.y, MAX_FALL_SPEED)
 	
 	if alive:
 		if is_on_floor():
@@ -51,6 +74,14 @@ func _physics_process(delta: float) -> void:
 		# coyote time
 		can_jump = is_on_floor() || can_jump && time_since_floor <= coyote_time
 		
+		# launch leniency
+		# TODO: it seems like a jump on the very first frame of launch leniency will cause a massive yeet,
+		#       so for consistency I should probably account for this... but it's funny if I don't
+		
+		var allow_launch_leniency := launch_frames_remaining > 0 # && launch_frames_remaining < LAUNCH_LENIENCY_FRAMES # don't allow launch on the frame that this happened
+		var adjusted_velocity := launch_velocity if allow_launch_leniency else velocity
+		launch_frames_remaining = maxi(0, launch_frames_remaining - 1)
+		
 		# Play animations
 		if can_jump:
 			if direction == 0:
@@ -58,19 +89,26 @@ func _physics_process(delta: float) -> void:
 			else:
 				animated_sprite.play("run")
 		
-		# Handle jump.
-		if Input.is_action_just_pressed("jump") and can_jump:
-			can_jump = false
-			velocity.y = JUMP_VELOCITY
-			animated_sprite.play("jump")
-			jump_sound.play()
-		
 		# Flip the sprite if necessary
 		if direction != 0:
 			animated_sprite.flip_h = direction < 0
 		
+		# Handle jump
+		if Input.is_action_just_pressed("jump") and can_jump:
+			if allow_launch_leniency:
+				print("launching. launch frames left: ", launch_frames_remaining, " ticks: ", Engine.get_physics_frames())
+			velocity = adjusted_velocity
+			velocity.y += JUMP_VELOCITY
+			check_speed()
+			animated_sprite.play("jump")
+			jump_sound.play()
+			launch_frames_remaining = 0
+			launch_velocity = Vector2.ZERO
+			can_jump = false
+		
 		var target_speed := direction * MAX_SPEED
-		if is_on_floor():
+		
+		if is_on_floor() && can_jump:
 			velocity.x = move_toward(velocity.x, target_speed, floor_acceleration * delta)
 		else:
 			var sign_a := signf(velocity.x)
@@ -80,6 +118,11 @@ func _physics_process(delta: float) -> void:
 			velocity.x = move_toward(velocity.x, target_speed, (air_drag if use_air_drag else air_acceleration) * delta)
 	
 	move_and_slide()
+
+
+func on_platform_velocity_shared(platform_velocity : Vector2) -> void:
+	launch_frames_remaining = LAUNCH_LENIENCY_FRAMES
+	launch_velocity = platform_velocity
 
 
 func kill() -> void:
@@ -95,3 +138,8 @@ func kill() -> void:
 		velocity.y = DEATH_BUMP_VELOCITY
 	# screenshake
 	game_manager.screen_shake(10.0)
+
+
+func _on_teleport_enable_trigger_body_entered(body: Node2D) -> void:
+	if body == self:
+		can_teleport = true
