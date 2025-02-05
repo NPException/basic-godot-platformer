@@ -11,7 +11,7 @@ var score: int = 0
 
 func _physics_process(_delta: float) -> void:
 	if Input.is_action_just_pressed("mute_music"):
-		Music.stream_paused = !Music.stream_paused
+		Music.volume_db = -999.0 if Music.volume_db == 0.0 else 0.0
 
 
 func add_point() -> void:

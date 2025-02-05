@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://do75xdw81strf"]
+[gd_scene load_steps=3 format=3 uid="uid://do75xdw81strf"]
 
 [ext_resource type="Script" path="res://scripts/killzone.gd" id="1_lf757"]
+[ext_resource type="Script" path="res://scripts/freeze_frames.gd" id="2_pb0cl"]
 
 [node name="Killzone" type="Area2D"]
 collision_mask = 2
@@ -9,6 +10,9 @@ script = ExtResource("1_lf757")
 [node name="Timer" type="Timer" parent="."]
 wait_time = 0.6
 one_shot = true
+
+[node name="FreezeFrames" type="Node" parent="."]
+script = ExtResource("2_pb0cl")
 
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]
 [connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]

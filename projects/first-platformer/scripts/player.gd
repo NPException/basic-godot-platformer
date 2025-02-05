@@ -2,12 +2,14 @@ class_name Player
 extends CharacterBody2D
 
 @onready var game_manager: GameManager = %GameManager
+@onready var freeze_frames: FreezeFrames = %FreezeFrames
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var hurt_sound: AudioStreamPlayer2D = $HurtSound
 @onready var jump_sound: AudioStreamPlayer2D = $JumpSound
 @onready var tap_sound: AudioStreamPlayer2D = $TapSound
+@onready var yeet_charge_sound: AudioStreamPlayer2D = $YeetChargeSound
 
 const MAX_SPEED = 130.0
 const MAX_FALL_SPEED = 300.0
@@ -74,10 +76,8 @@ func _physics_process(delta: float) -> void:
 		# launch leniency
 		# TODO: it seems like a jump on the very first frame of launch leniency will cause a massive yeet,
 		#       so for consistency I should probably account for this... but it's funny if I don't
-		
 		var allow_launch_leniency := launch_frames_remaining > 0 # && launch_frames_remaining < LAUNCH_LENIENCY_FRAMES # don't allow launch on the frame that this happened
 		var adjusted_velocity := launch_velocity if allow_launch_leniency else velocity
-		launch_frames_remaining = maxi(0, launch_frames_remaining - 1)
 		
 		# Play animations
 		if can_jump:
@@ -93,6 +93,8 @@ func _physics_process(delta: float) -> void:
 		# Handle jump
 		if Input.is_action_just_pressed("jump") and can_jump:
 			if allow_launch_leniency:
+				if launch_frames_remaining == LAUNCH_LENIENCY_FRAMES:
+					await yeet_silly()
 				print("launching. launch frames left: ", launch_frames_remaining, " ticks: ", Engine.get_physics_frames())
 			velocity = adjusted_velocity
 			velocity.y = JUMP_VELOCITY if velocity.y > 0 else velocity.y + JUMP_VELOCITY
@@ -102,6 +104,9 @@ func _physics_process(delta: float) -> void:
 			launch_frames_remaining = 0
 			launch_velocity = Vector2.ZERO
 			can_jump = false
+		
+		# decrement launch frames
+		launch_frames_remaining = maxi(0, launch_frames_remaining - 1)
 		
 		var target_speed := direction * MAX_SPEED
 		
@@ -115,6 +120,17 @@ func _physics_process(delta: float) -> void:
 			velocity.x = move_toward(velocity.x, target_speed, AIR_DRAG if use_air_drag else AIR_ACCELERATION)
 	
 	move_and_slide()
+
+
+func yeet_silly() -> void:
+	yeet_charge_sound.play()
+	game_manager.screen_shake(30)
+	Music.stop()
+	await freeze_frames.freeze(60)
+	$YeetMusic.play()
+	var on_yeet_music_finished: Signal = $YeetMusic.finished
+	if !on_yeet_music_finished.is_connected(Music.play):
+		on_yeet_music_finished.connect(Music.play)
 
 
 func on_platform_velocity_shared(platform_velocity : Vector2) -> void:

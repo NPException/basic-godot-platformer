@@ -83,6 +83,7 @@ mute_music={
 
 [physics]
 
+common/physics_jitter_fix=0.0
 common/physics_interpolation=true
 
 [rendering]

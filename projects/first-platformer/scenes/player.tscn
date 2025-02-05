@@ -1,10 +1,12 @@
-[gd_scene load_steps=35 format=3 uid="uid://cryh8buncfsne"]
+[gd_scene load_steps=37 format=3 uid="uid://cryh8buncfsne"]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_6ds7i"]
 [ext_resource type="Texture2D" uid="uid://ceptq2nuvg13o" path="res://assets/sprites/knight.png" id="1_g50i7"]
 [ext_resource type="AudioStream" uid="uid://bqqvmrjtuqv6s" path="res://assets/sounds/hurt.wav" id="3_tcqio"]
 [ext_resource type="AudioStream" uid="uid://bsmcok0eiihb4" path="res://assets/sounds/jump.wav" id="4_2l1aj"]
 [ext_resource type="AudioStream" uid="uid://dtw66rrqa36ni" path="res://assets/sounds/tap.wav" id="5_fuva2"]
+[ext_resource type="AudioStream" uid="uid://ba7mk0ugquqhe" path="res://assets/sounds/Stutter Hit E.wav" id="6_hbrvo"]
+[ext_resource type="AudioStream" uid="uid://dypu37jp1ned7" path="res://assets/music/Funk Vol2 New Shoes Cut 30.wav" id="7_7b0yc"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_5o0ga"]
 atlas = ExtResource("1_g50i7")
@@ -238,15 +240,28 @@ position = Vector2(0, -5)
 shape = SubResource("RectangleShape2D_aa34m")
 
 [node name="HurtSound" type="AudioStreamPlayer2D" parent="."]
+process_mode = 3
 stream = ExtResource("3_tcqio")
 bus = &"SFX"
 
 [node name="JumpSound" type="AudioStreamPlayer2D" parent="."]
+process_mode = 3
 stream = ExtResource("4_2l1aj")
 volume_db = -3.0
 bus = &"SFX"
 
 [node name="TapSound" type="AudioStreamPlayer2D" parent="."]
+process_mode = 3
 stream = ExtResource("5_fuva2")
 volume_db = -6.0
 bus = &"SFX"
+
+[node name="YeetChargeSound" type="AudioStreamPlayer2D" parent="."]
+process_mode = 3
+stream = ExtResource("6_hbrvo")
+bus = &"SFX"
+
+[node name="YeetMusic" type="AudioStreamPlayer" parent="."]
+process_mode = 3
+stream = ExtResource("7_7b0yc")
+bus = &"Music"

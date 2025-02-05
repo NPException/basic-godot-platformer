@@ -1,7 +1,8 @@
-[gd_scene load_steps=26 format=4 uid="uid://bilfwytt4enrc"]
+[gd_scene load_steps=27 format=4 uid="uid://bilfwytt4enrc"]
 
 [ext_resource type="Script" path="res://scripts/game_manager.gd" id="1_f64bx"]
 [ext_resource type="PackedScene" uid="uid://cryh8buncfsne" path="res://scenes/player.tscn" id="1_rg0j7"]
+[ext_resource type="Script" path="res://scripts/freeze_frames.gd" id="2_qscb7"]
 [ext_resource type="Texture2D" uid="uid://c0x6sigb0yfbh" path="res://assets/sprites/world_tileset.png" id="2_yhsjv"]
 [ext_resource type="PackedScene" uid="uid://c5nvocerokl2l" path="res://scenes/platform.tscn" id="3_gac21"]
 [ext_resource type="Script" path="res://scripts/camera.gd" id="3_l3dfo"]
@@ -318,11 +319,16 @@ size = Vector2(34, 370)
 unique_name_in_owner = true
 script = ExtResource("1_f64bx")
 
+[node name="FreezeFrames" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_qscb7")
+
 [node name="Player" parent="." instance=ExtResource("1_rg0j7")]
 position = Vector2(31, 48)
 
 [node name="Camera" type="Camera2D" parent="Player"]
 unique_name_in_owner = true
+process_mode = 3
 position = Vector2(0, -19)
 zoom = Vector2(4, 4)
 process_callback = 0
