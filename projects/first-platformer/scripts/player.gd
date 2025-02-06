@@ -35,8 +35,7 @@ var can_jump := true
 
 var frames_since_floor := 0
 
-#var can_teleport := false
-var can_teleport := true
+var can_teleport := OS.is_debug_build()
 
 
 signal start_disco
