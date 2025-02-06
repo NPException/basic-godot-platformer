@@ -1,5 +1,6 @@
-# Basic Godot platformer
+# Godot Practice Projects
 
-This game was made by following this tutorial by Brackeys: https://www.youtube.com/watch?v=LOhfqjmasi0
+This is a collection of Godot projects I work on for practice.
+Most of these are the result of following some course or tutorial.
 
-I added coyote time, some screenshake on death, and a few more sounds.
+Resulting games/programs are deployed here: https://npexception.github.io/godot-practice/
