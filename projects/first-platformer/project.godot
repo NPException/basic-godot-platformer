@@ -20,6 +20,7 @@ config/icon="res://icon.png"
 [autoload]
 
 DebugMenu="*res://addons/debug_menu/debug_menu.tscn"
+InputBuffer="*res://scripts/input_buffer.gd"
 Music="*res://scenes/music.tscn"
 
 [debug]

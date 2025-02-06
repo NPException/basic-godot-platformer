@@ -37,24 +37,34 @@ var frames_since_floor := 0
 
 var can_teleport := false
 
-func check_speed() -> void:
-	if velocity.x > 1000:
-		print("weeeeee ", Engine.get_physics_frames(), " - ", velocity) # set breakpoint here
+
+signal start_disco
+signal stop_disco
+
+
+func _stop_disco() -> void:
+	stop_disco.emit()
+	animated_sprite.self_modulate = Color.WHITE
+	$YeetMusic.stop()
+	Music.stream_paused = false
+
 
 # TODO:
 # - proportional jump. idea: quickly decay jump height when space is released mid jump (aka, increased gravity)
+# - half gravity at top of jump
+# - corner correction
+# - enable super yeet after collecting all coins in the main area, maybe emit particles from yeet platform
 # - drop down through one-way platforms/tiles when pressing duck
 # - separate floor acceleration and floor drag
 
 func _physics_process(delta: float) -> void:
 	if can_teleport && Input.is_action_just_pressed("yeet_reset"):
+		_stop_disco()
 		global_position = Vector2(832, -16)
 		velocity = Vector2.ZERO
 	
 	# get the input direction: negative, 0, positive
 	var direction := Input.get_axis("move_left", "move_right")
-	
-	check_speed()
 	
 	# count frames since leaving the floor
 	if is_on_floor():
@@ -73,11 +83,6 @@ func _physics_process(delta: float) -> void:
 		velocity.y = min(velocity.y, MAX_FALL_SPEED)
 	
 	if alive:
-		# launch leniency
-		# TODO: it seems like a jump on the very first frame of launch leniency will cause a massive yeet,
-		#       so for consistency I should probably account for this... but it's funny if I don't
-		var allow_launch_leniency := launch_frames_remaining > 0 # && launch_frames_remaining < LAUNCH_LENIENCY_FRAMES # don't allow launch on the frame that this happened
-		var adjusted_velocity := launch_velocity if allow_launch_leniency else velocity
 		
 		# Play animations
 		if can_jump:
@@ -90,15 +95,19 @@ func _physics_process(delta: float) -> void:
 		if direction != 0:
 			animated_sprite.flip_h = direction < 0
 		
+		# launch leniency
+		var allow_launch_leniency := launch_frames_remaining > 0 && launch_frames_remaining <= LAUNCH_LENIENCY_FRAMES # don't allow launch on the frame that this happened
+		
 		# Handle jump
-		if Input.is_action_just_pressed("jump") and can_jump:
-			if allow_launch_leniency:
-				if launch_frames_remaining == LAUNCH_LENIENCY_FRAMES:
-					await yeet_silly()
+		if can_jump and InputBuffer.is_action_press_buffered("jump", 5):
+			var adjusted_velocity := launch_velocity if allow_launch_leniency else velocity
+			# TODO: allow special yeet if player collected at least 15 coins (main area + island, end screen coin optional)
+			if allow_launch_leniency && launch_frames_remaining <= 3: # && game_manager.score >= 15:
+				adjusted_velocity += launch_velocity
+				await _yeet_silly()
 				print("launching. launch frames left: ", launch_frames_remaining, " ticks: ", Engine.get_physics_frames())
 			velocity = adjusted_velocity
 			velocity.y = JUMP_VELOCITY if velocity.y > 0 else velocity.y + JUMP_VELOCITY
-			check_speed()
 			animated_sprite.play("jump")
 			jump_sound.play()
 			launch_frames_remaining = 0
@@ -122,19 +131,21 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 
-func yeet_silly() -> void:
+func _yeet_silly() -> void:
+	start_disco.emit()
 	yeet_charge_sound.play()
 	game_manager.screen_shake(30)
-	Music.stop()
+	Music.stream_paused = true
 	await freeze_frames.freeze(60)
 	$YeetMusic.play()
 	var on_yeet_music_finished: Signal = $YeetMusic.finished
-	if !on_yeet_music_finished.is_connected(Music.play):
-		on_yeet_music_finished.connect(Music.play)
+	if !on_yeet_music_finished.is_connected(_stop_disco):
+		on_yeet_music_finished.connect(_stop_disco)
 
 
 func on_platform_velocity_shared(platform_velocity : Vector2) -> void:
-	launch_frames_remaining = LAUNCH_LENIENCY_FRAMES
+	# leniency might be checked in the same frame this value was set, aka the last frame the moving platform still has speed
+	launch_frames_remaining = LAUNCH_LENIENCY_FRAMES + 1
 	launch_velocity = platform_velocity
 
 
