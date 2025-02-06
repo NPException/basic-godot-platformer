@@ -35,18 +35,28 @@ var can_jump := true
 
 var frames_since_floor := 0
 
-var can_teleport := false
+#var can_teleport := false
+var can_teleport := true
 
 
 signal start_disco
 signal stop_disco
 
 
+func _start_disco() -> void:
+	start_disco.emit()
+	Music.volume_db = -999.0
+	$DiscoMusic.play()
+	var on_disco_music_finished: Signal = $DiscoMusic.finished
+	if !on_disco_music_finished.is_connected(_stop_disco):
+		on_disco_music_finished.connect(_stop_disco)
+
+
 func _stop_disco() -> void:
 	stop_disco.emit()
 	animated_sprite.self_modulate = Color.WHITE
-	$YeetMusic.stop()
-	Music.stream_paused = false
+	$DiscoMusic.stop()
+	Music.volume_db = 0.0
 
 
 # TODO:
@@ -104,7 +114,11 @@ func _physics_process(delta: float) -> void:
 			# TODO: allow special yeet if player collected at least 15 coins (main area + island, end screen coin optional)
 			if allow_launch_leniency && launch_frames_remaining <= 3: # && game_manager.score >= 15:
 				adjusted_velocity += launch_velocity
-				await _yeet_silly()
+				Music.volume_db = -999.0
+				yeet_charge_sound.play()
+				game_manager.screen_shake(30)
+				await freeze_frames.freeze(60)
+				_start_disco()
 				print("launching. launch frames left: ", launch_frames_remaining, " ticks: ", Engine.get_physics_frames())
 			velocity = adjusted_velocity
 			velocity.y = JUMP_VELOCITY if velocity.y > 0 else velocity.y + JUMP_VELOCITY
@@ -129,18 +143,6 @@ func _physics_process(delta: float) -> void:
 			velocity.x = move_toward(velocity.x, target_speed, AIR_DRAG if use_air_drag else AIR_ACCELERATION)
 	
 	move_and_slide()
-
-
-func _yeet_silly() -> void:
-	start_disco.emit()
-	yeet_charge_sound.play()
-	game_manager.screen_shake(30)
-	Music.stream_paused = true
-	await freeze_frames.freeze(60)
-	$YeetMusic.play()
-	var on_yeet_music_finished: Signal = $YeetMusic.finished
-	if !on_yeet_music_finished.is_connected(_stop_disco):
-		on_yeet_music_finished.connect(_stop_disco)
 
 
 func on_platform_velocity_shared(platform_velocity : Vector2) -> void:

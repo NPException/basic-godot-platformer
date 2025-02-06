@@ -261,7 +261,7 @@ process_mode = 3
 stream = ExtResource("6_hbrvo")
 bus = &"SFX"
 
-[node name="YeetMusic" type="AudioStreamPlayer" parent="."]
+[node name="DiscoMusic" type="AudioStreamPlayer" parent="."]
 process_mode = 3
 stream = ExtResource("7_7b0yc")
 bus = &"Music"
