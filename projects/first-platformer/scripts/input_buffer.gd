@@ -14,8 +14,6 @@ var mapped_actions: Dictionary = {}
 var joy_motion_active: Dictionary = {}
 # map from action string to timestamp when the action was last triggered
 var timestamps: Dictionary = {}
-#  map of action string to timestamp (the frame it was used/checked)
-var used_actions: Dictionary = {}
 
 
 func _axis_code(event: InputEventJoypadMotion) -> int:
@@ -32,6 +30,7 @@ func _input_key(event: InputEvent) -> String:
 		return "joyaxis_" + str(_axis_code(event))
 	return ""
 
+
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -45,14 +44,6 @@ func _ready() -> void:
 					joy_motion_active[input_key] = false
 			else:
 				assert(false, "unhandled input event! " + event.as_text())
-
-
-func _physics_process(_delta: float) -> void:
-	var current_frame := Engine.get_physics_frames()
-	for action: String in used_actions.keys():
-		if used_actions[action] < current_frame:
-			timestamps.erase(action)
-			used_actions.erase(action)
 
 
 # Called whenever the player makes an input.
@@ -86,13 +77,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	timestamps[mapped_actions[input_key]] = next_physics_frame
 
 
+func _clear_buffered_input(action: String) -> void:
+	timestamps.erase(action)
+
+
 # Returns whether any of the keyboard keys or joypad buttons in the given action were pressed within the buffer window.
 # Consumes that buffered input.
 func is_action_press_buffered(action: String, buffer_window: int = DEFAULT_BUFFER_WINDOW) -> bool:
 	var current_physics_frame := Engine.get_physics_frames()
-	if timestamps.has(action) && (!used_actions.has(action) || used_actions[action] == current_physics_frame):
-		if current_physics_frame - timestamps[action] <= buffer_window:
-			# Prevent this method from returning true repeatedly for the same input on consecutive frames
-			used_actions[action] = current_physics_frame
-			return true
+	if timestamps.has(action) && current_physics_frame - timestamps[action] <= buffer_window:
+		# Prevent this method from returning true repeatedly for the same input on consecutive frames
+		_clear_buffered_input.call_deferred(action)
+		return true
 	return false
