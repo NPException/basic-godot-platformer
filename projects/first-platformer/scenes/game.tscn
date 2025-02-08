@@ -354,11 +354,11 @@ position = Vector2(31, 48)
 unique_name_in_owner = true
 process_mode = 3
 position = Vector2(0, -19)
-zoom = Vector2(4, 4)
 process_callback = 0
 limit_bottom = 120
 limit_smoothed = true
 position_smoothing_enabled = true
+editor_draw_limits = true
 script = ExtResource("3_l3dfo")
 
 [node name="TileMap" type="Node2D" parent="."]
