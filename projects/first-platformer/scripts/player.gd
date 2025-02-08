@@ -73,7 +73,7 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 	
 	# get the input direction: negative, 0, positive
-	var direction := Input.get_axis("move_left", "move_right")
+	var direction := signf(Input.get_axis("move_left", "move_right"))
 	
 	# count frames since leaving the floor
 	if is_on_floor():
@@ -104,11 +104,11 @@ func _physics_process(delta: float) -> void:
 		if direction != 0:
 			animated_sprite.flip_h = direction < 0
 		
-		# launch leniency
-		var allow_launch_leniency := launch_frames_remaining > 0 && launch_frames_remaining <= LAUNCH_LENIENCY_FRAMES # don't allow launch on the frame that this happened
+		# launch leniency (don't allow launch on the frame that this happened)
+		var allow_launch_leniency := launch_frames_remaining > 0 && launch_frames_remaining <= LAUNCH_LENIENCY_FRAMES
 		
 		# Handle jump
-		if can_jump and InputBuffer.is_action_press_buffered("jump", 5):
+		if can_jump && InputBuffer.is_action_press_buffered("jump", 5):
 			var adjusted_velocity := launch_velocity if allow_launch_leniency else velocity
 			# TODO: allow special yeet if player collected at least 15 coins (main area + island, end screen coin optional)
 			if allow_launch_leniency && launch_frames_remaining <= 3: # && game_manager.score >= 15:
