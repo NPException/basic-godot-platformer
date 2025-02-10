@@ -56,7 +56,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if input_key.is_empty():
 		return
 	if !mapped_actions.has(input_key):
-		print("not an action")
+		if OS.is_debug_build():
+			print("not an action")
 		return
 		
 	if event is InputEventKey && (!event.pressed || event.is_echo()):

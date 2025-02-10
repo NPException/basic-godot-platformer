@@ -6,6 +6,7 @@ extends CharacterBody2D
 
 @onready var animated_sprite: AnimatedSprite2D = $AnimatedSprite2D
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
+@onready var drop_ray: RayCast2D = $DropThroughRay
 @onready var hurt_sound: AudioStreamPlayer2D = $HurtSound
 @onready var jump_sound: AudioStreamPlayer2D = $JumpSound
 @onready var tap_sound: AudioStreamPlayer2D = $TapSound
@@ -34,6 +35,7 @@ var alive := true
 var can_jump := true
 
 var frames_since_floor := 0
+var fall_through_frames_left := 0
 
 var can_teleport := OS.is_debug_build()
 
@@ -59,11 +61,10 @@ func _stop_disco() -> void:
 
 
 # TODO:
+# - switch to PhantomCamera
 # - proportional jump. idea: quickly decay jump height when space is released mid jump (aka, increased gravity)
 # - half gravity at top of jump
 # - corner correction
-# - enable super yeet after collecting all coins in the main area, maybe emit particles from yeet platform
-# - drop down through one-way platforms/tiles when pressing duck
 # - separate floor acceleration and floor drag
 
 func _physics_process(delta: float) -> void:
@@ -74,6 +75,12 @@ func _physics_process(delta: float) -> void:
 	
 	# get the input direction: negative, 0, positive
 	var direction := signf(Input.get_axis("move_left", "move_right"))
+	var ducking := Input.is_action_pressed("duck")
+	
+	if fall_through_frames_left == 0:
+		set_collision_mask_value(3, true)
+	else:
+		fall_through_frames_left -= 1 
 	
 	# count frames since leaving the floor
 	if is_on_floor():
@@ -95,7 +102,9 @@ func _physics_process(delta: float) -> void:
 		
 		# Play animations
 		if can_jump:
-			if direction == 0:
+			if ducking:
+				animated_sprite.play("duck")
+			elif direction == 0:
 				animated_sprite.play("idle")
 			else:
 				animated_sprite.play("run")
@@ -107,30 +116,36 @@ func _physics_process(delta: float) -> void:
 		# launch leniency (don't allow launch on the frame that this happened)
 		var allow_launch_leniency := launch_frames_remaining > 0 && launch_frames_remaining <= LAUNCH_LENIENCY_FRAMES
 		
-		# Handle jump
+		# Handle jump and drop throughs
 		if can_jump && InputBuffer.is_action_press_buffered("jump", 5):
-			var adjusted_velocity := launch_velocity if allow_launch_leniency else velocity
-			# TODO: allow special yeet if player collected at least 15 coins (main area + island, end screen coin optional)
-			if allow_launch_leniency && launch_frames_remaining <= 3: # && game_manager.score >= 15:
-				adjusted_velocity += launch_velocity
-				Music.volume_db = -999.0
-				yeet_charge_sound.play()
-				game_manager.screen_shake(30)
-				await freeze_frames.freeze(60)
-				_start_disco()
-				print("launching. launch frames left: ", launch_frames_remaining, " ticks: ", Engine.get_physics_frames())
-			velocity = adjusted_velocity
-			velocity.y = JUMP_VELOCITY if velocity.y > 0 else velocity.y + JUMP_VELOCITY
-			animated_sprite.play("jump")
-			jump_sound.play()
-			launch_frames_remaining = 0
-			launch_velocity = Vector2.ZERO
-			can_jump = false
+			# platform drop through
+			if ducking && fall_through_frames_left == 0 && drop_ray.is_colliding():
+				set_collision_mask_value(3, false)
+				fall_through_frames_left = 10
+			# jump handling
+			else:
+				var adjusted_velocity := launch_velocity if allow_launch_leniency else velocity
+				# TODO: allow special yeet if player collected at least 15 coins (main area + island, end screen coin optional)
+				if allow_launch_leniency && launch_frames_remaining <= 3: # && game_manager.score >= 15:
+					adjusted_velocity += launch_velocity
+					Music.volume_db = -999.0
+					yeet_charge_sound.play()
+					game_manager.screen_shake(30)
+					await freeze_frames.freeze(60)
+					_start_disco()
+					print("launching. launch frames left: ", launch_frames_remaining, " ticks: ", Engine.get_physics_frames())
+				velocity = adjusted_velocity
+				velocity.y = JUMP_VELOCITY if velocity.y > 0 else velocity.y + JUMP_VELOCITY
+				animated_sprite.play("jump")
+				jump_sound.play()
+				launch_frames_remaining = 0
+				launch_velocity = Vector2.ZERO
+				can_jump = false
 		
 		# decrement launch frames
 		launch_frames_remaining = maxi(0, launch_frames_remaining - 1)
 		
-		var target_speed := direction * MAX_SPEED
+		var target_speed := 0.0 if ducking && is_on_floor() else direction * MAX_SPEED
 		
 		if is_on_floor() && can_jump:
 			velocity.x = move_toward(velocity.x, target_speed, FLOOR_ACCELERATION)
