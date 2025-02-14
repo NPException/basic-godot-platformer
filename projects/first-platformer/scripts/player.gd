@@ -14,11 +14,13 @@ extends CharacterBody2D
 
 const MAX_SPEED = 130.0
 const MAX_FALL_SPEED = 300.0
-const FLOOR_ACCELERATION_FRAMES = 5
-const AIR_ACCELERATION_FRAMES = 10
+const FLOOR_ACCELERATION_FRAMES = 2
+const FLOOR_DRAG_FRAMES = 15
+const AIR_ACCELERATION_FRAMES = 8
 const AIR_DRAG_FRAMES = 30
 
 const FLOOR_ACCELERATION := MAX_SPEED / FLOOR_ACCELERATION_FRAMES
+const FLOOR_DRAG := MAX_SPEED / FLOOR_DRAG_FRAMES
 const AIR_ACCELERATION := MAX_SPEED / AIR_ACCELERATION_FRAMES
 const AIR_DRAG := MAX_SPEED / AIR_DRAG_FRAMES
 
@@ -62,10 +64,10 @@ func _stop_disco() -> void:
 
 # TODO:
 # - switch to PhantomCamera
+# - particle emitter when jumping
 # - proportional jump. idea: quickly decay jump height when space is released mid jump (aka, increased gravity)
 # - half gravity at top of jump
 # - corner correction
-# - separate floor acceleration and floor drag
 
 func _physics_process(delta: float) -> void:
 	if can_teleport && Input.is_action_just_pressed("yeet_reset"):
@@ -75,7 +77,7 @@ func _physics_process(delta: float) -> void:
 	
 	# get the input direction: negative, 0, positive
 	var direction := signf(Input.get_axis("move_left", "move_right"))
-	var ducking := Input.is_action_pressed("duck")
+	var ducking := is_on_floor() && Input.is_action_pressed("duck")
 	
 	if fall_through_frames_left == 0:
 		set_collision_mask_value(3, true)
@@ -137,6 +139,7 @@ func _physics_process(delta: float) -> void:
 				velocity = adjusted_velocity
 				velocity.y = JUMP_VELOCITY if velocity.y > 0 else velocity.y + JUMP_VELOCITY
 				animated_sprite.play("jump")
+				jump_sound.pitch_scale = randf_range(0.7, 1.0)
 				jump_sound.play()
 				launch_frames_remaining = 0
 				launch_velocity = Vector2.ZERO
@@ -147,14 +150,20 @@ func _physics_process(delta: float) -> void:
 		
 		var target_speed := 0.0 if ducking && is_on_floor() else direction * MAX_SPEED
 		
-		if is_on_floor() && can_jump:
-			velocity.x = move_toward(velocity.x, target_speed, FLOOR_ACCELERATION)
+		# use drag only when target speed is same direction and lower than current speed
+		# (aka, player is over max speed and still continuing in that direction)
+		var sign_a := signf(velocity.x)
+		var sign_b := signf(target_speed)
+		var use_drag := sign_a == sign_b && absf(target_speed) < absf(velocity.x)
+		
+		# can_jump might be false if a jump was buffered 
+		var accel: float
+		if is_on_floor():
+			accel = FLOOR_DRAG if use_drag || ducking else FLOOR_ACCELERATION
 		else:
-			var sign_a := signf(velocity.x)
-			var sign_b := signf(target_speed)
-			# use air drag only when target speed is same direction and lower than current speed
-			var use_air_drag := sign_a == sign_b && absf(target_speed) < absf(velocity.x)
-			velocity.x = move_toward(velocity.x, target_speed, AIR_DRAG if use_air_drag else AIR_ACCELERATION)
+			accel = AIR_DRAG if use_drag else AIR_ACCELERATION
+		
+		velocity.x = move_toward(velocity.x, target_speed, accel)
 	
 	move_and_slide()
 
@@ -168,6 +177,7 @@ func on_platform_velocity_shared(platform_velocity : Vector2) -> void:
 func kill() -> void:
 	alive = false
 	animated_sprite.play("death")
+	hurt_sound.pitch_scale = randf_range(0.8, 1.0)
 	hurt_sound.play()
 	collision_shape.queue_free()
 	# stop horizontal movement if we were moving downwards

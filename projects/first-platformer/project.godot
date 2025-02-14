@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Platformer Tutorial Game"
 config/description="Game created while following Brackey's first Godot tutorial: https://www.youtube.com/watch?v=LOhfqjmasi0"
-config/version="1.10.0"
+config/version="1.11.0"
 run/main_scene="res://scenes/game.tscn"
 config/features=PackedStringArray("4.3", "Forward Plus")
 run/max_fps=60
